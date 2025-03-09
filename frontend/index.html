@@ -1,54 +1,217 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>ComfyUI Image Generator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComfyUI 图像生成器</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
         }
+
         .container {
-            max-width: 600px;
-            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        textarea {
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        input[type="text"], textarea {
             width: 100%;
-            height: 100px;
-            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
+
         button {
-            padding: 10px 20px;
-            background-color: #007bff;
+            background: #007bff;
             color: white;
             border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
             cursor: pointer;
+            transition: background 0.3s;
         }
+
         button:hover {
-            background-color: #0056b3;
+            background: #0056b3;
         }
-        .result img {
-            max-width: 100%;
+
+        #progressBar {
+            height: 20px;
+            background: #eee;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        #progress {
+            height: 100%;
+            width: 0%;
+            background: #28a745;
+            transition: width 0.3s ease;
+        }
+
+        #result {
             margin-top: 20px;
+            text-align: center;
+        }
+
+        #outputImage {
+            max-width: 100%;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .download-btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: #17a2b8;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>ComfyUI Image Generator</h1>
-        <textarea id="prompt"></textarea>
-        <button onclick="generate()">Generate</button>
+        <h1>AI 图像生成器</h1>
+        
+        <!-- 提示词输入区域 -->
+        <div class="input-group">
+            <label for="positivePrompt">正向提示词:</label>
+            <textarea id="positivePrompt" rows="3">best quality, masterpiece, 1girl</textarea>
+        </div>
+        
+        <div class="input-group">
+            <label for="negativePrompt">反向提示词:</label>
+            <textarea id="negativePrompt" rows="2">low quality, worst quality</textarea>
+        </div>
+
+        <!-- 参数设置 -->
+        <div class="input-group">
+            <label for="steps">采样步数:</label>
+            <input type="text" id="steps" value="20">
+        </div>
+
+        <!-- 进度条 -->
+        <div id="progressBar">
+            <div id="progress"></div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <button onclick="generateImage()">开始生成</button>
+        
+        <!-- 结果展示 -->
         <div id="result"></div>
     </div>
+
     <script>
-        async function generate() {
-            const prompt = document.getElementById('prompt').value;
-            const response = await fetch('/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt })
-            });
-            const data = await response.json();
-            document.getElementById('result').innerHTML = `<img src="${data.image_url}">`;
+        // ComfyUI 配置
+        const COMFYUI_API = "http://42.192.108.200:6889";
+        let executionId = null;
+
+        // 生成图像函数
+        async function generateImage() {
+            const positive = document.getElementById('positivePrompt').value;
+            const negative = document.getElementById('negativePrompt').value;
+            const steps = document.getElementById('steps').value;
+
+            // 显示进度条
+            document.getElementById('progressBar').style.display = 'block';
+            
+            try {
+                // 构建工作流请求
+                const workflow = {
+                    "nodes": [
+                        {
+                            "id": 1,
+                            "type": "CLIPTextEncode",
+                            "inputs": {
+                                "text": positive
+                            }
+                        },
+                        {
+                            "id": 2,
+                            "type": "CLIPTextEncode",
+                            "inputs": {
+                                "text": negative
+                            }
+                        },
+                        {
+                            "id": 3,
+                            "type": "KSampler",
+                            "inputs": {
+                                "steps": parseInt(steps),
+                                "seed": Math.floor(Math.random() * 1000000)
+                            }
+                        }
+                    ]
+                };
+
+                // 发送生成请求
+                const response = await fetch(`${COMFYUI_API}/prompt`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: workflow })
+                });
+
+                const data = await response.json();
+                executionId = data.execution_id;
+
+                // 开始轮询进度
+                pollProgress();
+            } catch (error) {
+                alert(`请求失败: ${error}`);
+            }
+        }
+
+        // 轮询进度函数
+        async function pollProgress() {
+            try {
+                const response = await fetch(`${COMFYUI_API}/progress/${executionId}`);
+                const data = await response.json();
+                
+                // 更新进度条
+                const progress = data.progress * 100;
+                document.getElementById('progress').style.width = `${progress}%`;
+
+                if (data.status === 'completed') {
+                    showResult(data.output);
+                } else if (data.status === 'running') {
+                    setTimeout(pollProgress, 1000); // 每秒轮询一次
+                }
+            } catch (error) {
+                alert(`进度获取失败: ${error}`);
+            }
+        }
+
+        // 显示结果
+        function showResult(output) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <img id="outputImage" src="${output.url}" alt="生成结果">
+                <br>
+                <a href="${output.url}" download="generated_image.png" class="download-btn">下载图片</a>
+            `;
         }
     </script>
 </body>
