@@ -10,7 +10,7 @@ apt-get update
 apt-get install -y python3-pip python3-venv nginx git
 
 # 克隆代码到服务器
-git clone https://github.com/your-username/comfyui-web-deploy.git /opt/comfyui-web
+git clone https://github.com/0f00f0/comfyui-web-deploy.git /opt/comfyui-web
 cd /opt/comfyui-web
 
 # 配置 Python 虚拟环境
