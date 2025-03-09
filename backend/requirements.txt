@@ -1,0 +1,11 @@
+# ComfyUI 网站后端依赖
+Flask==2.0.3             # Web 框架核心
+requests==2.28.1         # 用于调用 ComfyUI API
+python-dotenv==0.21.1    # 环境变量管理（可选）
+
+# 生产环境部署推荐
+gunicorn==20.1.0         # WSGI HTTP 服务器
+gevent==21.12.0          # 异步支持（如需高并发）
+
+# 开发测试依赖（可选）
+pytest==7.4.0            # 单元测试框架
