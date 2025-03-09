@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ComfyUI Image Generator</title>
+    <style>
+        /* 样式代码（与之前提供的一致） */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ComfyUI Image Generator</h1>
+        <textarea id="prompt"></textarea>
+        <button onclick="generate()">Generate</button>
+        <div id="result"></div>
+    </div>
+    <script>
+        async function generate() {
+            const prompt = document.getElementById('prompt').value;
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt })
+            });
+            const data = await response.json();
+            document.getElementById('result').innerHTML = `<img src="${data.image_url}">`;
+        }
+    </script>
+</body>
+</html>
