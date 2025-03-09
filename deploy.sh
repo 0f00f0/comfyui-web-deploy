@@ -2,8 +2,8 @@
 set -e  # 遇到错误立即停止
 
 # 配置参数（需根据实际修改）
-COMFYUI_IP="localhost"     # ComfyUI 服务器的 IP
-COMFYUI_PORT="8188"        # ComfyUI 的端口
+COMFYUI_IP="42.192.108.200"     # ComfyUI 服务器的 IP
+COMFYUI_PORT="6889"        # ComfyUI 的端口
 
 # 安装系统依赖
 apt-get update
